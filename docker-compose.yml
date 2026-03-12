@@ -1,0 +1,39 @@
+services:
+  # Локальный PostgreSQL (оставлен закомментированным, если захотите использовать не Supabase)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: admin
+  #     POSTGRES_PASSWORD: admin
+  #     POSTGRES_DB: postgres
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+  #     interval: 3s
+  #     timeout: 3s
+  #     retries: 5
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      # Настройки для Supabase (подставьте свои значения или используйте .env)
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      # Старые настройки PostgreSQL оставлены закомментированными
+      # PGHOST: postgres
+      # PGPORT: 5432
+      # PGUSER: admin
+      # PGPASSWORD: admin
+      # PGDATABASE: postgres
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+
+volumes:
+  postgres_data:

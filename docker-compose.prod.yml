@@ -1,0 +1,7 @@
+# Переопределение для продакшена: приложение доступно только с localhost (Nginx проксирует HTTPS).
+# Запуск: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    ports:
+      - "127.0.0.1:3000:3000"

@@ -1,0 +1,192 @@
+/* Блок в стиле «Размещение» — синий фон, белый текст */
+.survey-block {
+  background: #3498db;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  color: #fff;
+}
+
+.survey-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+}
+
+.survey-subtitle {
+  margin: 0 0 1.5rem;
+  font-size: 0.95rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.survey-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.survey-fieldset {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 0;
+}
+
+.survey-legend {
+  font-weight: 600;
+  padding: 0 0.5rem;
+  color: #fff;
+}
+
+.survey-hint {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 4px;
+}
+
+.survey-fieldset--room {
+  position: relative;
+}
+
+.survey-room-combobox {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.survey-room-input,
+.survey-room-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  color: #111827;
+  box-sizing: border-box;
+}
+
+.survey-room-select {
+  cursor: pointer;
+}
+
+.survey-room-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.survey-room-dropdown-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: #111827;
+  font-size: 0.95rem;
+}
+
+.survey-room-dropdown-item:hover {
+  background: #3498db;
+  color: #fff;
+}
+
+.survey-room-dropdown-item--empty {
+  cursor: default;
+  color: #6b7280;
+}
+
+.survey-room-dropdown-item--empty:hover {
+  background: transparent;
+  color: #6b7280;
+}
+
+.survey-radios {
+  display: flex;
+  gap: 1rem;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.survey-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.survey-comment {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-radius: 6px;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.survey-radio {
+  width: 20px;
+  height: 20px;
+  accent-color: #e67e22;
+  cursor: pointer;
+}
+
+.survey-radio-text {
+  font-weight: 500;
+}
+
+.survey-message {
+  margin: 0;
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+}
+
+.survey-message--success {
+  color: #a8f0c8;
+}
+
+.survey-message--error {
+  color: #ffcdd2;
+}
+
+.survey-already-done {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+/* Кнопка — оранжевая, скруглённая, как «Забронировать» / «Сбросить» */
+.survey-submit {
+  padding: 0.85rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: #e67e22;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  align-self: center;
+  margin-top: 0.5rem;
+  transition: background 0.2s;
+}
+
+.survey-submit:hover:not(:disabled) {
+  background: #d35400;
+}
+
+.survey-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
