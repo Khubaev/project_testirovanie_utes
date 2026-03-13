@@ -40,6 +40,9 @@ if (isProd) {
       if (err) res.status(404).send('Not Found');
     });
   });
+  console.log('Serving static from:', clientDist);
+} else {
+  console.log('NODE_ENV is not production — static files and SPA fallback are disabled');
 }
 
 async function start() {
