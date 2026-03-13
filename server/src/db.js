@@ -49,13 +49,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-// Для Supabase структура таблицы настраивается через панель Supabase / SQL-миграции.
-// Здесь init просто проверяет возможность подключения.
 async function init() {
-  const { error } = await supabase.from('survey_responses').select('id').limit(1);
-  if (error && error.code !== 'PGRST116') {
-    // PGRST116 — таблица не найдена. В этом случае просто сообщаем об ошибке явно.
-    throw error;
+  try {
+    const { error } = await supabase.from('survey_responses').select('id').limit(1);
+    if (error && error.code !== 'PGRST116') {
+      console.error('Supabase init error:', error);
+    }
+  } catch (err) {
+    console.error('Supabase init fetch failed:', err);
   }
 }
 
