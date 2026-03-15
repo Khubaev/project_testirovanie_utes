@@ -19,8 +19,10 @@ const isProd = process.env.NODE_ENV === 'production';
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
-app.use(cors());
-app.use(morgan('dev'));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || true,
+}));
+app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(express.json({ limit: '100kb' }));
 
 const apiLimiter = rateLimit({
@@ -29,6 +31,8 @@ const apiLimiter = rateLimit({
   message: { error: 'Слишком много запросов, попробуйте позже' },
 });
 app.use('/api/', apiLimiter);
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/surveys', surveysRouter);
 
@@ -48,8 +52,15 @@ if (isProd) {
 async function start() {
   await initDb();
   console.log('Database ready');
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+  });
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
   });
 }
 

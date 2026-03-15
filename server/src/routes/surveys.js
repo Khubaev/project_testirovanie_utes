@@ -1,7 +1,23 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import supabase from '../db.js';
 
+const checkLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Слишком много запросов' },
+});
+
 const router = Router();
+
+function requireApiKey(req, res, next) {
+  const key = process.env.STATS_API_KEY;
+  if (!key) return next(); // не задан — открытый доступ (dev-режим)
+  if (req.headers['x-api-key'] !== key) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
 
 // GET /api/surveys — редирект на главную, чтобы не показывать "Not Found"
 router.get('/', (req, res) => res.redirect(302, '/'));
@@ -159,6 +175,14 @@ router.post('/', validateBody, async (req, res) => {
 const checkCache = new Map();
 const CHECK_CACHE_TTL_MS = 60 * 1000;
 
+// Периодически очищаем устаревшие записи кэша для предотвращения утечки памяти
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of checkCache.entries()) {
+    if (now - entry.ts > CHECK_CACHE_TTL_MS) checkCache.delete(key);
+  }
+}, CHECK_CACHE_TTL_MS);
+
 function getCachedCheck(deviceId) {
   const entry = checkCache.get(deviceId);
   if (!entry) return null;
@@ -173,7 +197,7 @@ function setCachedCheck(deviceId, submitted) {
   checkCache.set(deviceId, { submitted, ts: Date.now() });
 }
 
-router.get('/check', async (req, res) => {
+router.get('/check', checkLimiter, async (req, res) => {
   const deviceId = req.query.device_id;
   if (!deviceId || typeof deviceId !== 'string' || deviceId.trim().length === 0) {
     return res.status(400).json({ error: 'Missing device_id' });
@@ -203,7 +227,7 @@ router.get('/check', async (req, res) => {
 const LIST_DEFAULT_LIMIT = 50;
 const LIST_MAX_LIMIT = 200;
 
-router.get('/responses', async (req, res) => {
+router.get('/responses', requireApiKey, async (req, res) => {
   try {
     const roomIdParam = req.query.room_id;
     const roomId = roomIdParam != null && roomIdParam !== '' ? parseInt(roomIdParam, 10) : null;
@@ -237,7 +261,7 @@ router.get('/responses', async (req, res) => {
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireApiKey, async (req, res) => {
   try {
     const { data, error, count } = await supabase
       .from('survey_responses')
@@ -256,22 +280,33 @@ router.get('/stats', async (req, res) => {
       food_quality: 0,
       service_zone_quality: 0,
     };
+    const counts = {
+      service_quality: 0,
+      cost_rating: 0,
+      cleaning_quality: 0,
+      reception_quality: 0,
+      food_quality: 0,
+      service_zone_quality: 0,
+    };
     data.forEach((row) => {
       Object.keys(sums).forEach((k) => {
         const v = row[k];
-        if (v != null) sums[k] += Number(v);
+        if (v != null) {
+          sums[k] += Number(v);
+          counts[k]++;
+        }
       });
     });
 
     res.json({
       total,
       averages: {
-        service_quality: total ? round(sums.service_quality / total) : null,
-        cost_rating: total ? round(sums.cost_rating / total) : null,
-        cleaning_quality: total ? round(sums.cleaning_quality / total) : null,
-        reception_quality: total ? round(sums.reception_quality / total) : null,
-        food_quality: total ? round(sums.food_quality / total) : null,
-        service_zone_quality: total ? round(sums.service_zone_quality / total) : null,
+        service_quality: counts.service_quality ? round(sums.service_quality / counts.service_quality) : null,
+        cost_rating: counts.cost_rating ? round(sums.cost_rating / counts.cost_rating) : null,
+        cleaning_quality: counts.cleaning_quality ? round(sums.cleaning_quality / counts.cleaning_quality) : null,
+        reception_quality: counts.reception_quality ? round(sums.reception_quality / counts.reception_quality) : null,
+        food_quality: counts.food_quality ? round(sums.food_quality / counts.food_quality) : null,
+        service_zone_quality: counts.service_zone_quality ? round(sums.service_zone_quality / counts.service_zone_quality) : null,
       },
     });
   } catch (err) {
