@@ -159,6 +159,14 @@ router.post('/', validateBody, async (req, res) => {
 const checkCache = new Map();
 const CHECK_CACHE_TTL_MS = 60 * 1000;
 
+// Периодически очищаем устаревшие записи кэша для предотвращения утечки памяти
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of checkCache.entries()) {
+    if (now - entry.ts > CHECK_CACHE_TTL_MS) checkCache.delete(key);
+  }
+}, CHECK_CACHE_TTL_MS);
+
 function getCachedCheck(deviceId) {
   const entry = checkCache.get(deviceId);
   if (!entry) return null;
@@ -256,22 +264,33 @@ router.get('/stats', async (req, res) => {
       food_quality: 0,
       service_zone_quality: 0,
     };
+    const counts = {
+      service_quality: 0,
+      cost_rating: 0,
+      cleaning_quality: 0,
+      reception_quality: 0,
+      food_quality: 0,
+      service_zone_quality: 0,
+    };
     data.forEach((row) => {
       Object.keys(sums).forEach((k) => {
         const v = row[k];
-        if (v != null) sums[k] += Number(v);
+        if (v != null) {
+          sums[k] += Number(v);
+          counts[k]++;
+        }
       });
     });
 
     res.json({
       total,
       averages: {
-        service_quality: total ? round(sums.service_quality / total) : null,
-        cost_rating: total ? round(sums.cost_rating / total) : null,
-        cleaning_quality: total ? round(sums.cleaning_quality / total) : null,
-        reception_quality: total ? round(sums.reception_quality / total) : null,
-        food_quality: total ? round(sums.food_quality / total) : null,
-        service_zone_quality: total ? round(sums.service_zone_quality / total) : null,
+        service_quality: counts.service_quality ? round(sums.service_quality / counts.service_quality) : null,
+        cost_rating: counts.cost_rating ? round(sums.cost_rating / counts.cost_rating) : null,
+        cleaning_quality: counts.cleaning_quality ? round(sums.cleaning_quality / counts.cleaning_quality) : null,
+        reception_quality: counts.reception_quality ? round(sums.reception_quality / counts.reception_quality) : null,
+        food_quality: counts.food_quality ? round(sums.food_quality / counts.food_quality) : null,
+        service_zone_quality: counts.service_zone_quality ? round(sums.service_zone_quality / counts.service_zone_quality) : null,
       },
     });
   } catch (err) {

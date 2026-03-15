@@ -126,6 +126,7 @@ export default function SurveyForm() {
   };
 
   const allFilled = QUESTIONS.every((q) => form[q.key] !== null && form[q.key] >= 1 && form[q.key] <= 5);
+  const filledCount = QUESTIONS.filter((q) => form[q.key] !== null && form[q.key] >= 1 && form[q.key] <= 5).length;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,16 +136,7 @@ export default function SurveyForm() {
     try {
       await submitSurvey({ ...form, device_id: deviceId });
       markAsSubmitted();
-      setMessage({ type: 'success', text: 'Спасибо! Ваш ответ сохранён.' });
-      setRoomSearchQuery('');
-      setForm({
-        room_id: '',
-        ...QUESTIONS.reduce((acc, q) => {
-          acc[q.key] = null;
-          acc[q.commentKey] = '';
-          return acc;
-        }, {}),
-      });
+      setServerSaysSubmitted(true);
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Ошибка отправки' });
     } finally {
@@ -179,7 +171,9 @@ export default function SurveyForm() {
 
       <form onSubmit={handleSubmit} className="survey-form">
         <fieldset className="survey-fieldset survey-fieldset--room">
-          <legend className="survey-legend">Номер комнаты</legend>
+          <legend className="survey-legend">
+            Номер комнаты <span className="survey-optional">(необязательно)</span>
+          </legend>
           <div className="survey-room-combobox" ref={roomDropdownRef}>
             <input
               type="text"
@@ -236,27 +230,30 @@ export default function SurveyForm() {
             {q.hint && <span className="survey-hint">{q.hint}</span>}
             <div className="survey-radios">
               {[1, 2, 3, 4, 5].map((n) => (
-                <label key={n} className="survey-label">
-                  <input
-                    type="radio"
-                    name={q.key}
-                    value={n}
-                    checked={form[q.key] === n}
-                    onChange={() => setRating(q.key, n)}
-                    className="survey-radio"
-                  />
-                  <span className="survey-radio-text">{n}</span>
-                </label>
+                <button
+                  key={n}
+                  type="button"
+                  className={`survey-radio-btn${form[q.key] === n ? ' survey-radio-btn--active' : ''}`}
+                  onClick={() => setRating(q.key, n)}
+                  aria-label={`Оценка ${n}`}
+                >
+                  {n}
+                </button>
               ))}
             </div>
-            <textarea
-              className="survey-comment"
-              rows={3}
-              maxLength={2000}
-              placeholder="Здесь вы можете описать, что именно не понравилось или понравилось (до 2000 символов)"
-              value={form[q.commentKey]}
-              onChange={(e) => setComment(q.commentKey, e.target.value)}
-            />
+            <div className="survey-comment-wrap">
+              <textarea
+                className="survey-comment"
+                rows={3}
+                maxLength={2000}
+                placeholder="Здесь вы можете описать, что именно не понравилось или понравилось (до 2000 символов)"
+                value={form[q.commentKey]}
+                onChange={(e) => setComment(q.commentKey, e.target.value)}
+              />
+              {form[q.commentKey].length > 0 && (
+                <span className="survey-char-count">{form[q.commentKey].length}/2000</span>
+              )}
+            </div>
           </fieldset>
         ))}
 
@@ -266,13 +263,16 @@ export default function SurveyForm() {
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={!allFilled || loading}
-          className="survey-submit"
-        >
-          {loading ? 'Отправка...' : 'Отправить'}
-        </button>
+        <div className="survey-footer">
+          <span className="survey-progress">{filledCount} / {QUESTIONS.length} оценено</span>
+          <button
+            type="submit"
+            disabled={!allFilled || loading}
+            className="survey-submit"
+          >
+            {loading ? 'Отправка...' : 'Отправить'}
+          </button>
+        </div>
       </form>
     </section>
   );
