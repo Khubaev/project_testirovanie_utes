@@ -105,6 +105,10 @@
   color: #fff;
 }
 
+.survey-room-dropdown-item--active {
+  background: #e8f4fd;
+}
+
 .survey-room-dropdown-item--empty {
   cursor: default;
   color: #6b7280;
@@ -150,6 +154,16 @@
   transform: scale(1.1);
 }
 
+.survey-radio-btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.survey-skip-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+}
+
 /* Кнопка «Не пользовался(ась)» для необязательных вопросов */
 .survey-skip-btn {
   background: transparent;
@@ -188,6 +202,8 @@
   border: none;
   padding: 0.5rem 0.75rem;
   resize: vertical;
+  min-height: 72px;
+  max-height: 200px;
   font-family: inherit;
   font-size: 0.9rem;
   color: #111827;

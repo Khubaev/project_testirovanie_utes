@@ -37,6 +37,27 @@ export function clearSubmittedFlag() {
   if (typeof localStorage !== 'undefined') localStorage.removeItem(SUBMITTED_STORAGE);
 }
 
+const DRAFT_STORAGE = 'guest_survey_draft';
+
+export function saveDraft(formData) {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(DRAFT_STORAGE, JSON.stringify(formData));
+  }
+}
+
+export function loadDraft() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(DRAFT_STORAGE) : null;
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearDraft() {
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(DRAFT_STORAGE);
+}
+
 /** Проверка по серверу: есть ли ответ с данным device_id в БД */
 export async function checkSubmittedOnServer(deviceId) {
   if (!deviceId) return false;

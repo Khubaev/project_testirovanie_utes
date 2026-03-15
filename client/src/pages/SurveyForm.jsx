@@ -1,5 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { submitSurvey, getOrCreateDeviceId, markAsSubmitted, clearSubmittedFlag, checkSubmittedOnServer, getRooms } from '../api.js';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import {
+  submitSurvey, getOrCreateDeviceId, markAsSubmitted, clearSubmittedFlag,
+  checkSubmittedOnServer, getRooms, saveDraft, loadDraft, clearDraft,
+} from '../api.js';
 import './SurveyForm.css';
 
 function filterRooms(rooms, query) {
@@ -55,6 +58,17 @@ const QUESTIONS = [
 
 const REQUIRED_QUESTIONS = QUESTIONS.filter((q) => !q.optional);
 
+function buildEmptyForm() {
+  return {
+    room_id: '',
+    ...QUESTIONS.reduce((acc, q) => {
+      acc[q.key] = null;
+      acc[q.commentKey] = '';
+      return acc;
+    }, {}),
+  };
+}
+
 export default function SurveyForm() {
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
   const [serverSaysSubmitted, setServerSaysSubmitted] = useState(null);
@@ -69,8 +83,12 @@ export default function SurveyForm() {
     checkSubmittedOnServer(deviceId)
       .then((submitted) => {
         setServerSaysSubmitted(submitted);
-        if (submitted) markAsSubmitted();
-        else clearSubmittedFlag();
+        if (submitted) {
+          markAsSubmitted();
+          clearDraft();
+        } else {
+          clearSubmittedFlag();
+        }
       })
       .catch(() => {
         setServerSaysSubmitted(false);
@@ -82,18 +100,18 @@ export default function SurveyForm() {
   const [rooms, setRooms] = useState([]);
   const [roomSearchQuery, setRoomSearchQuery] = useState('');
   const [roomDropdownOpen, setRoomDropdownOpen] = useState(false);
+  const [activeDropdownIndex, setActiveDropdownIndex] = useState(-1);
   const roomDropdownRef = useRef(null);
+  const dropdownListRef = useRef(null);
 
-  const [form, setForm] = useState({
-    room_id: '',
-    ...QUESTIONS.reduce((acc, q) => {
-      acc[q.key] = null;
-      acc[q.commentKey] = '';
-      return acc;
-    }, {}),
-  });
+  const [form, setForm] = useState(() => loadDraft() ?? buildEmptyForm());
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // Автосохранение черновика при каждом изменении формы
+  useEffect(() => {
+    saveDraft(form);
+  }, [form]);
 
   const filteredRooms = useMemo(
     () => filterRooms(rooms, roomSearchQuery),
@@ -114,11 +132,52 @@ export default function SurveyForm() {
     function handleClickOutside(e) {
       if (roomDropdownRef.current && !roomDropdownRef.current.contains(e.target)) {
         setRoomDropdownOpen(false);
+        setActiveDropdownIndex(-1);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Прокрутка активного пункта в видимую область
+  useEffect(() => {
+    if (!dropdownListRef.current || activeDropdownIndex < 0) return;
+    const items = dropdownListRef.current.querySelectorAll('[role="option"]');
+    if (items[activeDropdownIndex]) {
+      items[activeDropdownIndex].scrollIntoView({ block: 'nearest' });
+    }
+  }, [activeDropdownIndex]);
+
+  const handleRoomKeyDown = useCallback((e) => {
+    if (!roomDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setRoomDropdownOpen(true);
+        setActiveDropdownIndex(0);
+        e.preventDefault();
+      }
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveDropdownIndex((i) => Math.min(i + 1, filteredRooms.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveDropdownIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeDropdownIndex >= 0 && filteredRooms[activeDropdownIndex]) {
+        const r = filteredRooms[activeDropdownIndex];
+        setForm((prev) => ({ ...prev, room_id: String(r.id) }));
+        setRoomSearchQuery('');
+        setRoomDropdownOpen(false);
+        setActiveDropdownIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      setRoomDropdownOpen(false);
+      setActiveDropdownIndex(-1);
+      e.target.blur();
+    }
+  }, [roomDropdownOpen, filteredRooms, activeDropdownIndex]);
 
   const setRating = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -144,10 +203,12 @@ export default function SurveyForm() {
     try {
       await submitSurvey({ ...form, device_id: deviceId });
       markAsSubmitted();
+      clearDraft();
       setServerSaysSubmitted(true);
     } catch (err) {
       if (err.message && err.message.includes('уже отправили')) {
         markAsSubmitted();
+        clearDraft();
         setServerSaysSubmitted(true);
         return;
       }
@@ -192,41 +253,54 @@ export default function SurveyForm() {
               type="text"
               className="survey-room-input"
               placeholder="Введите номер или название"
+              role="combobox"
+              aria-expanded={roomDropdownOpen}
+              aria-autocomplete="list"
+              aria-controls="room-dropdown"
+              aria-activedescendant={
+                activeDropdownIndex >= 0 && filteredRooms[activeDropdownIndex]
+                  ? `room-option-${filteredRooms[activeDropdownIndex].id}`
+                  : undefined
+              }
               value={roomDropdownOpen ? roomSearchQuery : selectedRoomName || roomSearchQuery}
               onChange={(e) => {
                 setRoomSearchQuery(e.target.value);
                 setRoomDropdownOpen(true);
+                setActiveDropdownIndex(-1);
                 if (form.room_id) setForm((prev) => ({ ...prev, room_id: '' }));
               }}
               onFocus={() => {
                 setRoomDropdownOpen(true);
                 if (form.room_id && !roomSearchQuery) setRoomSearchQuery(selectedRoomName);
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setRoomDropdownOpen(false);
-                  e.target.blur();
-                }
-              }}
+              onKeyDown={handleRoomKeyDown}
               autoComplete="off"
             />
             {roomDropdownOpen && (
-              <ul className="survey-room-dropdown" role="listbox">
+              <ul
+                id="room-dropdown"
+                ref={dropdownListRef}
+                className="survey-room-dropdown"
+                role="listbox"
+              >
                 {filteredRooms.length === 0 ? (
                   <li className="survey-room-dropdown-item survey-room-dropdown-item--empty">
                     Нет подходящих комнат
                   </li>
                 ) : (
-                  filteredRooms.map((r) => (
+                  filteredRooms.map((r, idx) => (
                     <li
                       key={r.id}
+                      id={`room-option-${r.id}`}
                       role="option"
-                      className="survey-room-dropdown-item"
+                      aria-selected={String(r.id) === String(form.room_id)}
+                      className={`survey-room-dropdown-item${idx === activeDropdownIndex ? ' survey-room-dropdown-item--active' : ''}`}
                       onMouseDown={(e) => {
                         e.preventDefault();
                         setForm((prev) => ({ ...prev, room_id: String(r.id) }));
                         setRoomSearchQuery('');
                         setRoomDropdownOpen(false);
+                        setActiveDropdownIndex(-1);
                       }}
                     >
                       {r.name}
@@ -252,6 +326,7 @@ export default function SurveyForm() {
                   className={`survey-radio-btn${form[q.key] === n ? ' survey-radio-btn--active' : ''}`}
                   onClick={() => setRating(q.key, n)}
                   aria-label={`Оценка ${n}`}
+                  aria-pressed={form[q.key] === n}
                 >
                   {n}
                 </button>

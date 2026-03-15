@@ -1,5 +1,12 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import supabase from '../db.js';
+
+const checkLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Слишком много запросов' },
+});
 
 const router = Router();
 
@@ -190,7 +197,7 @@ function setCachedCheck(deviceId, submitted) {
   checkCache.set(deviceId, { submitted, ts: Date.now() });
 }
 
-router.get('/check', async (req, res) => {
+router.get('/check', checkLimiter, async (req, res) => {
   const deviceId = req.query.device_id;
   if (!deviceId || typeof deviceId !== 'string' || deviceId.trim().length === 0) {
     return res.status(400).json({ error: 'Missing device_id' });
