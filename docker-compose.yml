@@ -29,6 +29,9 @@ services:
       # Настройки для Supabase (подставьте свои значения или используйте .env)
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      # Telegram-бот (опционально)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       # Старые настройки PostgreSQL оставлены закомментированными
       # PGHOST: postgres
       # PGPORT: 5432
