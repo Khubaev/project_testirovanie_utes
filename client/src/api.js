@@ -1,7 +1,21 @@
 const API = '/api';
+const FETCH_TIMEOUT_MS = 10000;
+
+function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal })
+    .catch((err) => {
+      if (err.name === 'AbortError') {
+        throw new Error('Превышено время ожидания. Проверьте соединение.');
+      }
+      throw err;
+    })
+    .finally(() => clearTimeout(id));
+}
 
 export async function submitSurvey(data) {
-  const res = await fetch(`${API}/surveys`, {
+  const res = await fetchWithTimeout(`${API}/surveys`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -61,20 +75,24 @@ export function clearDraft() {
 /** Проверка по серверу: есть ли ответ с данным device_id в БД */
 export async function checkSubmittedOnServer(deviceId) {
   if (!deviceId) return false;
-  const res = await fetch(`${API}/surveys/check?device_id=${encodeURIComponent(deviceId)}`);
-  if (!res.ok) return false;
-  const data = await res.json();
-  return data.submitted === true;
+  try {
+    const res = await fetchWithTimeout(`${API}/surveys/check?device_id=${encodeURIComponent(deviceId)}`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.submitted === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function getStats() {
-  const res = await fetch(`${API}/surveys/stats`);
+  const res = await fetchWithTimeout(`${API}/surveys/stats`);
   if (!res.ok) throw new Error('Failed to load stats');
   return res.json();
 }
 
 export async function getRooms() {
-  const res = await fetch(`${API}/surveys/rooms`);
+  const res = await fetchWithTimeout(`${API}/surveys/rooms`);
   if (!res.ok) throw new Error('Не удалось загрузить список комнат');
   return res.json();
 }

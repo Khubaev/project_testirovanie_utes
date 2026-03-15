@@ -98,11 +98,17 @@ export default function SurveyForm() {
   }, [deviceId]);
 
   const [rooms, setRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [roomsError, setRoomsError] = useState(false);
   const [roomSearchQuery, setRoomSearchQuery] = useState('');
   const [roomDropdownOpen, setRoomDropdownOpen] = useState(false);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState(-1);
   const roomDropdownRef = useRef(null);
   const dropdownListRef = useRef(null);
+
+  // Определяем был ли черновик (до инициализации формы)
+  const hasDraft = useMemo(() => loadDraft() !== null, []);
+  const [draftBannerVisible, setDraftBannerVisible] = useState(hasDraft);
 
   const [form, setForm] = useState(() => loadDraft() ?? buildEmptyForm());
   const [loading, setLoading] = useState(false);
@@ -123,9 +129,17 @@ export default function SurveyForm() {
   );
 
   useEffect(() => {
+    setRoomsLoading(true);
     getRooms()
-      .then(setRooms)
-      .catch(() => setRooms([]));
+      .then((data) => {
+        setRooms(data);
+        setRoomsError(false);
+      })
+      .catch(() => {
+        setRooms([]);
+        setRoomsError(true);
+      })
+      .finally(() => setRoomsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -179,6 +193,13 @@ export default function SurveyForm() {
     }
   }, [roomDropdownOpen, filteredRooms, activeDropdownIndex]);
 
+  const resetForm = () => {
+    clearDraft();
+    setForm(buildEmptyForm());
+    setDraftBannerVisible(false);
+    setMessage(null);
+  };
+
   const setRating = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setMessage(null);
@@ -222,7 +243,7 @@ export default function SurveyForm() {
     return (
       <section className="survey-block">
         <h2 className="survey-title">Анонимное Анкетирование</h2>
-        <p className="survey-subtitle">Загрузка...</p>
+        <p className="survey-subtitle survey-loading-dots">Загрузка</p>
       </section>
     );
   }
@@ -243,6 +264,15 @@ export default function SurveyForm() {
       <h2 className="survey-title">Анонимное Анкетирование</h2>
       <p className="survey-subtitle">Пожалуйста, оцените по шкале от 1 до 5</p>
 
+      {draftBannerVisible && (
+        <div className="survey-draft-banner">
+          <span>Черновик восстановлен</span>
+          <button type="button" className="survey-draft-reset" onClick={resetForm}>
+            Начать заново
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="survey-form">
         <fieldset className="survey-fieldset survey-fieldset--room">
           <legend className="survey-legend">
@@ -252,7 +282,8 @@ export default function SurveyForm() {
             <input
               type="text"
               className="survey-room-input"
-              placeholder="Введите номер или название"
+              placeholder={roomsLoading ? 'Загрузка комнат...' : 'Введите номер или название'}
+              disabled={roomsLoading}
               role="combobox"
               aria-expanded={roomDropdownOpen}
               aria-autocomplete="list"
@@ -276,7 +307,10 @@ export default function SurveyForm() {
               onKeyDown={handleRoomKeyDown}
               autoComplete="off"
             />
-            {roomDropdownOpen && (
+            {roomsError && (
+              <p className="survey-rooms-error">Не удалось загрузить список комнат</p>
+            )}
+            {roomDropdownOpen && !roomsLoading && (
               <ul
                 id="room-dropdown"
                 ref={dropdownListRef}

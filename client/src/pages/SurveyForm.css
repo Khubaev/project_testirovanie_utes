@@ -53,6 +53,56 @@
   margin-top: 4px;
 }
 
+/* Анимация мигающих точек для состояния загрузки */
+.survey-loading-dots::after {
+  content: '';
+  animation: survey-dots 1.4s steps(3, end) infinite;
+}
+@keyframes survey-dots {
+  0%   { content: ''; }
+  33%  { content: '.'; }
+  66%  { content: '..'; }
+  100% { content: '...'; }
+}
+
+/* Баннер восстановления черновика */
+.survey-draft-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #fff;
+  gap: 0.75rem;
+}
+
+.survey-draft-reset {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.survey-draft-reset:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Ошибка загрузки комнат */
+.survey-rooms-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: #ffcdd2;
+}
+
 .survey-fieldset--room {
   position: relative;
 }

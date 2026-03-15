@@ -32,6 +32,8 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 app.use('/api/surveys', surveysRouter);
 
 if (isProd) {
@@ -50,8 +52,15 @@ if (isProd) {
 async function start() {
   await initDb();
   console.log('Database ready');
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+  });
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
   });
 }
 
