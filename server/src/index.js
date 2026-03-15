@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import surveysRouter from './routes/surveys.js';
 import { init as initDb } from './db.js';
+import { initBot, stopBot } from './telegram.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,11 +53,13 @@ if (isProd) {
 async function start() {
   await initDb();
   console.log('Database ready');
+  initBot();
   const server = app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
   process.on('SIGTERM', () => {
     console.log('SIGTERM received, shutting down gracefully');
+    stopBot();
     server.close(() => {
       console.log('Server closed');
       process.exit(0);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import supabase from '../db.js';
+import { notifyLowRating } from '../telegram.js';
 
 const checkLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -121,15 +122,17 @@ router.post('/', validateBody, async (req, res) => {
     }
 
     const rid = parseRoomId(roomId);
+    let roomName = null;
     if (rid !== null) {
       const { data: roomExists, error: roomErr } = await supabase
         .from('room_numbers')
-        .select('id')
+        .select('id, name')
         .eq('id', rid)
         .maybeSingle();
       if (roomErr || !roomExists) {
         return res.status(400).json({ error: 'Недопустимый номер комнаты' });
       }
+      roomName = roomExists.name ?? null;
     }
 
     const { data, error } = await supabase
@@ -162,6 +165,23 @@ router.post('/', validateBody, async (req, res) => {
 
     setCachedCheck(deviceId.trim(), true);
     res.status(201).json({ id: data.id, ok: true });
+
+    // Уведомление в Telegram при низких оценках (не блокирует ответ гостю)
+    notifyLowRating({
+      room_name: roomName,
+      service_quality:    Number(service_quality),
+      cost_rating:        Number(cost_rating),
+      cleaning_quality:   Number(cleaning_quality),
+      reception_quality:  Number(reception_quality),
+      food_quality:       food_quality != null ? Number(food_quality) : null,
+      service_zone_quality: service_zone_quality != null ? Number(service_zone_quality) : null,
+      service_comment:    sanitizeComment(service_comment),
+      cost_comment:       sanitizeComment(cost_comment),
+      cleaning_comment:   sanitizeComment(cleaning_comment),
+      reception_comment:  sanitizeComment(reception_comment),
+      food_comment:       sanitizeComment(food_comment),
+      service_zone_comment: sanitizeComment(service_zone_comment),
+    }).catch(() => {});
   } catch (err) {
     console.error('Survey POST error:', err);
     if (err.code === '23505') {
