@@ -42,14 +42,18 @@ const QUESTIONS = [
     label: 'Как вы оцениваете питание на курорте',
     hint: '1 — очень плохо, 5 — очень хорошо',
     commentKey: 'food_comment',
+    optional: true,
   },
   {
     key: 'service_zone_quality',
     label: 'Оцените сервис в зоне шведки, ресторане, баре',
     hint: '1 — очень плохо, 5 — очень хорошо',
     commentKey: 'service_zone_comment',
+    optional: true,
   },
 ];
+
+const REQUIRED_QUESTIONS = QUESTIONS.filter((q) => !q.optional);
 
 export default function SurveyForm() {
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
@@ -121,12 +125,16 @@ export default function SurveyForm() {
     setMessage(null);
   };
 
+  const clearRating = (key, commentKey) => {
+    setForm((prev) => ({ ...prev, [key]: null, [commentKey]: '' }));
+  };
+
   const setComment = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const allFilled = QUESTIONS.every((q) => form[q.key] !== null && form[q.key] >= 1 && form[q.key] <= 5);
-  const filledCount = QUESTIONS.filter((q) => form[q.key] !== null && form[q.key] >= 1 && form[q.key] <= 5).length;
+  const allFilled = REQUIRED_QUESTIONS.every((q) => form[q.key] !== null && form[q.key] >= 1 && form[q.key] <= 5);
+  const filledCount = REQUIRED_QUESTIONS.filter((q) => form[q.key] !== null && form[q.key] >= 1 && form[q.key] <= 5).length;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -138,6 +146,11 @@ export default function SurveyForm() {
       markAsSubmitted();
       setServerSaysSubmitted(true);
     } catch (err) {
+      if (err.message && err.message.includes('уже отправили')) {
+        markAsSubmitted();
+        setServerSaysSubmitted(true);
+        return;
+      }
       setMessage({ type: 'error', text: err.message || 'Ошибка отправки' });
     } finally {
       setLoading(false);
@@ -226,7 +239,10 @@ export default function SurveyForm() {
         </fieldset>
         {QUESTIONS.map((q) => (
           <fieldset key={q.key} className="survey-fieldset">
-            <legend className="survey-legend">{q.label}</legend>
+            <legend className="survey-legend">
+              {q.label}
+              {q.optional && <span className="survey-optional"> (необязательно)</span>}
+            </legend>
             {q.hint && <span className="survey-hint">{q.hint}</span>}
             <div className="survey-radios">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -240,7 +256,19 @@ export default function SurveyForm() {
                   {n}
                 </button>
               ))}
+              {q.optional && form[q.key] !== null && (
+                <button
+                  type="button"
+                  className="survey-skip-btn"
+                  onClick={() => clearRating(q.key, q.commentKey)}
+                >
+                  Не пользовался(ась)
+                </button>
+              )}
             </div>
+            {q.optional && form[q.key] === null && (
+              <p className="survey-skip-hint">Не оценивайте, если не пользовались этой услугой</p>
+            )}
             <div className="survey-comment-wrap">
               <textarea
                 className="survey-comment"
@@ -264,7 +292,7 @@ export default function SurveyForm() {
         )}
 
         <div className="survey-footer">
-          <span className="survey-progress">{filledCount} / {QUESTIONS.length} оценено</span>
+          <span className="survey-progress">{filledCount} / {REQUIRED_QUESTIONS.length} оценено</span>
           <button
             type="submit"
             disabled={!allFilled || loading}

@@ -150,6 +150,32 @@
   transform: scale(1.1);
 }
 
+/* Кнопка «Не пользовался(ась)» для необязательных вопросов */
+.survey-skip-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  height: 44px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.survey-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.survey-skip-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
 /* Обёртка комментария со счётчиком */
 .survey-comment-wrap {
   position: relative;

@@ -19,8 +19,10 @@ const isProd = process.env.NODE_ENV === 'production';
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
-app.use(cors());
-app.use(morgan('dev'));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || true,
+}));
+app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(express.json({ limit: '100kb' }));
 
 const apiLimiter = rateLimit({

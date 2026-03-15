@@ -3,6 +3,15 @@ import supabase from '../db.js';
 
 const router = Router();
 
+function requireApiKey(req, res, next) {
+  const key = process.env.STATS_API_KEY;
+  if (!key) return next(); // не задан — открытый доступ (dev-режим)
+  if (req.headers['x-api-key'] !== key) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 // GET /api/surveys — редирект на главную, чтобы не показывать "Not Found"
 router.get('/', (req, res) => res.redirect(302, '/'));
 
@@ -211,7 +220,7 @@ router.get('/check', async (req, res) => {
 const LIST_DEFAULT_LIMIT = 50;
 const LIST_MAX_LIMIT = 200;
 
-router.get('/responses', async (req, res) => {
+router.get('/responses', requireApiKey, async (req, res) => {
   try {
     const roomIdParam = req.query.room_id;
     const roomId = roomIdParam != null && roomIdParam !== '' ? parseInt(roomIdParam, 10) : null;
@@ -245,7 +254,7 @@ router.get('/responses', async (req, res) => {
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireApiKey, async (req, res) => {
   try {
     const { data, error, count } = await supabase
       .from('survey_responses')
